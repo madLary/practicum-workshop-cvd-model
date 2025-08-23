@@ -1,1 +1,12 @@
 # practicum-workshop-cvd-model
+
+
+Env:
+
+python==3.9.22
+ipykernel==6.29.5
+
+pandas==1.2.4
+numpy=1.24.4
+matplotlib==3.3.4
+seaborn==0.11.1
