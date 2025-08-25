@@ -176,6 +176,11 @@ class PredictPathRequest(BaseModel):
     csv_path: str
 
 
+class PredictSavePathRequest(BaseModel):
+    csv_path: str
+    output_csv_path: str
+
+
 def create_app(service: CvdRiskModelService) -> FastAPI:
     app = FastAPI(title="CVD Risk Prediction API", version="0.1.0")
 
@@ -200,6 +205,43 @@ def create_app(service: CvdRiskModelService) -> FastAPI:
             return PredictResponse(
                 predictions=predictions, num_instances=len(df)
             )
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/predict_save_path")
+    def predict_save_path(payload: PredictSavePathRequest) -> Dict[str, Any]:
+        """Считывает CSV, предсказывает и сохраняет результат в CSV с колонками id,prediction."""
+        try:
+            df = pd.read_csv(payload.csv_path)
+            # Повторяем ту же подготовку, что и в predict_path
+            df["Gender"] = df["Gender"].replace(
+                {"1.0": "Male", "0.0": "Female"}
+            )
+            df = df.dropna()
+
+            df.drop(columns=["Unnamed: 0"], inplace=True)
+            # Сохраним id до изменения индекса
+            if "id" in df.columns:
+                ids = df["id"].copy()
+                df = df.set_index("id")
+            else:
+                # Если id уже индекс — используем его
+                ids = df.index.to_series().rename("id")
+            format_column_names(df)
+            df = df.dropna()
+            if "diet" in df.columns:
+                df = df.drop(["diet"], axis=1)
+
+            predictions = service.predict_dataframe(df)
+            out_df = pd.DataFrame(
+                {"id": ids.values, "prediction": predictions}
+            )
+            out_df.to_csv(payload.output_csv_path, index=False)
+            return {
+                "status": "ok",
+                "saved_to": payload.output_csv_path,
+                "num_instances": int(len(out_df)),
+            }
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
