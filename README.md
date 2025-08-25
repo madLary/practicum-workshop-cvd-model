@@ -55,7 +55,7 @@ curl -s -X POST http://localhost:8000/predict_path \
   -d '{"csv_path": "datasets/heart_test.csv"}'
 ```
 
-Сохранение в CSV:
+`/predict_save_path` - с сохранением в CSV:
 
 ```bash
 curl -s -X POST http://localhost:8000/predict_save_path \
